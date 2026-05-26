@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Melody Fake — 멜로디 페이크 도구</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f0f;
+  --bg2: #1a1a1a;
+  --bg3: #242424;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --text: #f0ede8;
+  --text2: #8a8580;
+  --text3: #555250;
+  --accent: #c8a96e;
+  --accent2: #9b7d4a;
+  --chord: #4a8fa8;
+  --chord-bg: rgba(74,143,168,0.12);
+  --nonchord: #c47d3a;
+  --nonchord-bg: rgba(196,125,58,0.12);
+  --ornament: #5a9e6f;
+  --ornament-bg: rgba(90,158,111,0.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* header */
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 2rem 2.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+}
+.logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.5rem;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+.logo-sub {
+  font-size: 0.75rem;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* layout */
+.main {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  min-height: calc(100vh - 73px);
+}
+
+/* sidebar */
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  overflow-y: auto;
+}
+.section-title {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 0.75rem;
+}
+
+/* piano keyboard */
+.keyboard {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.key-white {
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 38px;
+  text-align: center;
+}
+.key-white:hover { background: rgba(255,255,255,0.12); color: var(--text); border-color: var(--accent2); }
+.key-black {
+  padding: 6px 8px;
+  background: rgba(200,169,110,0.08);
+  border: 1px solid rgba(200,169,110,0.2);
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  color: var(--accent2);
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 34px;
+  text-align: center;
+}
+.key-black:hover { background: rgba(200,169,110,0.18); color: var(--accent); }
+
+/* melody tags */
+.melody-display {
+  min-height: 44px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+.m-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+  animation: pop 0.15s ease;
+}
+@keyframes pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.m-tag button { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 0; line-height: 1; }
+.m-tag button:hover { color: var(--text); }
+.empty-hint { font-size: 12px; color: var(--text3); font-style: italic; }
+
+/* text input row */
+.input-row {
+  display: flex;
+  gap: 8px;
+}
+input[type=text] {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: 'Pretendard', sans-serif;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+input[type=text]:focus { border-color: var(--accent2); }
+input[type=text]::placeholder { color: var(--text3); }
+
+button.btn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-family: 'Pretendard', sans-serif;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+button.btn:hover { border-color: var(--accent2); color: var(--accent); }
+button.btn.primary {
+  border-color: var(--accent2);
+  color: var(--accent);
+}
+button.btn.primary:hover { background: rgba(200,169,110,0.1); }
+
+/* chord tags */
+.chord-display {
+  min-height: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.c-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(200,169,110,0.08);
+  border: 1px solid rgba(200,169,110,0.2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-family: 'DM Mono', monospace;
+  color: var(--accent);
+  animation: pop 0.15s ease;
+}
+.c-tag button { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: 13px; padding: 0; }
+.c-tag button:hover { color: var(--text); }
+
+/* presets */
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: 'Pretendard', sans-serif;
+}
+.preset-btn:hover { border-color: var(--border2); color: var(--text2); }
+
+/* style toggles */
+.toggle-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.toggle {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: 'Pretendard', sans-serif;
+}
+.toggle:hover { border-color: var(--border2); color: var(--text2); }
+.toggle.on { border-color: var(--accent2); color: var(--accent); background: rgba(200,169,110,0.06); }
+
+/* generate button */
+.gen-btn {
+  width: 100%;
+  padding: 14px;
+  background: rgba(200,169,110,0.1);
+  border: 1px solid var(--accent2);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: 14px;
+  font-family: 'Pretendard', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+  margin-top: auto;
+}
+.gen-btn:hover { background: rgba(200,169,110,0.18); }
+.gen-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* result panel */
+.result-panel {
+  padding: 2.5rem;
+  overflow-y: auto;
+}
+.result-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: var(--text3);
+}
+.result-empty .big-text {
+  font-family: 'DM Serif Display', serif;
+  font-size: 3rem;
+  color: rgba(200,169,110,0.15);
+  letter-spacing: -0.02em;
+}
+
+/* result content */
+.result-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.result-header .orig-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text3); margin-bottom: 0.5rem; }
+.result-header .orig-line {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.1rem;
+  color: var(--text2);
+  letter-spacing: 0.05em;
+}
+
+.legend {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+.leg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); }
+.leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+.fake-version {
+  margin-bottom: 2.5rem;
+  animation: fadeIn 0.4s ease forwards;
+  opacity: 0;
+}
+.fake-version:nth-child(2) { animation-delay: 0.1s; }
+.fake-version:nth-child(3) { animation-delay: 0.2s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.version-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 0.75rem;
+}
+.note-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+.note-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  position: relative;
+  cursor: default;
+  transition: transform 0.1s;
+}
+.note-pill:hover { transform: translateY(-2px); }
+.note-pill.chord { background: var(--chord-bg); color: var(--chord); border: 1px solid rgba(74,143,168,0.25); }
+.note-pill.nonchord { background: var(--nonchord-bg); color: var(--nonchord); border: 1px solid rgba(196,125,58,0.25); }
+.note-pill.ornament { background: var(--ornament-bg); color: var(--ornament); border: 1px solid rgba(90,158,111,0.25); }
+
+.note-pill .tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--text2);
+  font-family: 'Pretendard', sans-serif;
+  z-index: 10;
+}
+.note-pill:hover .tooltip { display: block; }
+
+.why-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  border-left: 2px solid var(--accent2);
+  border-radius: 0 6px 6px 0;
+}
+.version-divider { height: 1px; background: var(--border); margin: 2rem 0; }
+
+.loading-dots { display: inline-flex; gap: 4px; }
+.loading-dots span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent2);
+  animation: bounce 1.2s infinite ease-in-out;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+@media (max-width: 768px) {
+  .main { grid-template-columns: 1fr; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Melody Fake</div>
+  <div class="logo-sub">멜로디 페이크 연습 도구</div>
+</header>
+
+<div class="main">
+  <aside class="sidebar">
+
+    <div>
+      <div class="section-title">멜로디 입력</div>
+      <div class="keyboard" id="key-btns"></div>
+      <div class="melody-display" id="melody-display">
+        <span class="empty-hint" id="mel-hint">음표를 눌러 입력하세요</span>
+      </div>
+      <div class="input-row">
+        <input type="text" id="manual-in" placeholder="도레미 또는 C D E 직접 입력" />
+        <button class="btn primary" onclick="parseManual()">적용</button>
+        <button class="btn" onclick="clearMelody()">초기화</button>
+      </div>
+      <div style="font-size:11px; color:var(--text3); margin-top:6px;">도레미 또는 C D E, 섞어서 입력 가능</div>
+    </div>
+
+    <div>
+      <div class="section-title">코드 진행</div>
+      <div class="chord-display" id="chord-display">
+        <span class="empty-hint" id="chord-hint">코드를 추가하세요</span>
+      </div>
+      <div class="input-row" style="margin-bottom:10px;">
+        <input type="text" id="chord-in" placeholder="예: Cmaj7, Am7, G7" />
+        <button class="btn primary" onclick="addChord()">추가</button>
+        <button class="btn" onclick="clearChords()">초기화</button>
+      </div>
+      <div class="section-title" style="margin-bottom:6px;">프리셋</div>
+      <div class="presets">
+        <button class="preset-btn" onclick="loadChords(['Cmaj7','Am7','Dm7','G7'])">ii-V-I (C)</button>
+        <button class="preset-btn" onclick="loadChords(['Fmaj7','Em7','Am7','G7'])">팝 4도</button>
+        <button class="preset-btn" onclick="loadChords(['Cm7','F7','Bbmaj7','Ebmaj7'])">블루스</button>
+        <button class="preset-btn" onclick="loadChords(['Dmaj7','Bm7','Em7','A7'])">ii-V-I (D)</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">스타일</div>
+      <div class="toggle-group" id="style-group">
+        <button class="toggle on" data-s="jazz" onclick="setStyle(this)">재즈 페이크</button>
+        <button class="toggle" data-s="ballad" onclick="setStyle(this)">발라드</button>
+        <button class="toggle" data-s="bebop" onclick="setStyle(this)">비밥</button>
+        <button class="toggle" data-s="gospel" onclick="setStyle(this)">가스펠/소울</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">사용할 기법</div>
+      <div class="toggle-group" id="tech-group">
+        <button class="toggle on" data-t="grace" onclick="toggleTech(this)">앞꾸밈음</button>
+        <button class="toggle on" data-t="passing" onclick="toggleTech(this)">경과음</button>
+        <button class="toggle on" data-t="neighbor" onclick="toggleTech(this)">보조음</button>
+        <button class="toggle" data-t="turn" onclick="toggleTech(this)">돌음</button>
+        <button class="toggle" data-t="anticipation" onclick="toggleTech(this)">당김음</button>
+        <button class="toggle" data-t="delay" onclick="toggleTech(this)">지연음</button>
+      </div>
+    </div>
+
+    <button class="gen-btn" id="gen-btn" onclick="generate()">
+      ▶ 멜로디 페이크 생성
+    </button>
+
+  </aside>
+
+  <main class="result-panel" id="result-panel">
+    <div class="result-empty">
+      <div class="big-text">♩</div>
+      <div style="font-size:14px;">왼쪽에서 멜로디와 코드를 입력하고<br>생성 버튼을 눌러주세요</div>
+    </div>
+  </main>
+</div>
+
+<script>
+const EN = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const KR = ['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
+const KR2EN = {};
+KR.forEach((k,i) => KR2EN[k] = EN[i]);
+
+let melody = [], chords = [], selStyle = 'jazz', activeTech = new Set(['grace','passing','neighbor']);
+
+const STYLE_LABELS = {jazz:'재즈 페이크', ballad:'발라드', bebop:'비밥', gospel:'가스펠/소울'};
+const TECH_LABELS = {grace:'앞꾸밈음', passing:'경과음', neighbor:'보조음', turn:'돌음', anticipation:'당김음', delay:'지연음'};
+
+function buildKeys() {
+  const whites = ['C','D','E','F','G','A','B'];
+  const blacks = ['C#','D#','','F#','G#','A#',''];
+  const kr_w = ['도','레','미','파','솔','라','시'];
+  let html = '';
+  whites.forEach((n,i) => {
+    html += `<button class="key-white" onclick="addNote('${n}')">${n}<br><span style="font-size:10px;opacity:0.5">${kr_w[i]}</span></button>`;
+    if (blacks[i]) html += `<button class="key-black" onclick="addNote('${blacks[i]}')">${blacks[i]}</button>`;
+  });
+  document.getElementById('key-btns').innerHTML = html;
+}
+
+function addNote(n) { melody.push(n); renderMelody(); }
+function clearMelody() { melody = []; renderMelody(); }
+function renderMelody() {
+  const d = document.getElementById('melody-display');
+  const h = document.getElementById('mel-hint');
+  if (!melody.length) { d.innerHTML = ''; d.appendChild(h); return; }
+  h.style.display = 'none';
+  d.innerHTML = melody.map((n,i) =>
+    `<div class="m-tag">${n}<button onclick="melody.splice(${i},1);renderMelody()" aria-label="삭제">×</button></div>`
+  ).join('');
+}
+
+function parseManual() {
+  const raw = document.getElementById('manual-in').value.trim();
+  if (!raw) return;
+  raw.split(/[\s,]+/).filter(Boolean).forEach(t => {
+    const up = t.charAt(0).toUpperCase() + t.slice(1);
+    if (EN.includes(up)) melody.push(up);
+    else if (KR2EN[up]) melody.push(KR2EN[up]);
+    else if (KR2EN[t]) melody.push(KR2EN[t]);
+  });
+  renderMelody();
+  document.getElementById('manual-in').value = '';
+}
+document.getElementById('manual-in').addEventListener('keydown', e => { if(e.key==='Enter') parseManual(); });
+
+function addChord() {
+  const v = document.getElementById('chord-in').value.trim();
+  if (!v) return;
+  chords.push(v);
+  document.getElementById('chord-in').value = '';
+  renderChords();
+}
+function clearChords() { chords = []; renderChords(); }
+function loadChords(arr) { chords = [...arr]; renderChords(); }
+function renderChords() {
+  const d = document.getElementById('chord-display');
+  const h = document.getElementById('chord-hint');
+  if (!chords.length) { d.innerHTML = ''; d.appendChild(h); return; }
+  h.style.display = 'none';
+  d.innerHTML = chords.map((c,i) =>
+    `<div class="c-tag">${c}<button onclick="chords.splice(${i},1);renderChords()" aria-label="삭제">×</button></div>`
+  ).join('');
+}
+document.getElementById('chord-in').addEventListener('keydown', e => { if(e.key==='Enter') addChord(); });
+
+function setStyle(btn) {
+  document.querySelectorAll('#style-group .toggle').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on'); selStyle = btn.dataset.s;
+}
+function toggleTech(btn) {
+  const t = btn.dataset.t;
+  if (activeTech.has(t)) { activeTech.delete(t); btn.classList.remove('on'); }
+  else { activeTech.add(t); btn.classList.add('on'); }
+}
+
+async function generate() {
+  if (!melody.length) { alert('멜로디를 입력해주세요.'); return; }
+  if (!chords.length) { alert('코드를 추가해주세요.'); return; }
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  btn.textContent = '생성 중...';
+  document.getElementById('result-panel').innerHTML = `
+    <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--text3);">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+      <div style="font-size:13px;">페이크 버전 생성 중...</div>
+    </div>`;
+
+  const techList = [...activeTech].map(t => TECH_LABELS[t]).join(', ') || '없음';
+  const prompt = `당신은 재즈 멜로디 페이크(melody fake) 전문 음악 교육자입니다. 비전공자도 이해할 수 있도록 쉽게 설명해주세요.
+
+원곡 멜로디 (음이름): ${melody.join(' ')}
+코드 진행: ${chords.join(' → ')}
+스타일: ${STYLE_LABELS[selStyle]}
+사용할 기법: ${techList}
+
+아래 JSON 배열 형식으로만 응답하세요 (마크다운 없이, 순수 JSON):
+[
+  {
+    "version": "버전 이름 (예: 기본 페이크, 화려한 버전)",
+    "notes": [
+      {
+        "note": "음이름 (예: C, D#)",
+        "type": "chord | nonchord | ornament",
+        "label": "짧은 설명 (예: 코드음, 경과음, 앞꾸밈음)"
+      }
+    ],
+    "why": "이 버전의 특징을 비전공자도 알 수 있게 1~2줄 설명 (한국어)"
+  }
+]
+
+조건:
+- 2가지 페이크 버전 제안
+- type은 반드시 chord, nonchord, ornament 중 하나
+- 원곡보다 음이 더 많아도 됨
+- why는 쉬운 말로 설명`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content.map(i => i.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    renderResult(parsed);
+  } catch(e) {
+    document.getElementById('result-panel').innerHTML = `<div style="padding:2rem;color:var(--text3)">오류가 발생했습니다: ${e.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = '▶ 다시 생성';
+}
+
+function renderResult(versions) {
+  let html = `
+    <div class="result-header">
+      <div class="orig-label">원곡 멜로디</div>
+      <div class="orig-line">${melody.join('  ·  ')}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:6px;">${chords.join(' → ')} · ${STYLE_LABELS[selStyle]}</div>
+    </div>
+    <div class="legend">
+      <div class="leg"><span class="leg-dot" style="background:var(--chord)"></span> 코드 구성음</div>
+      <div class="leg"><span class="leg-dot" style="background:var(--nonchord)"></span> 비화성음</div>
+      <div class="leg"><span class="leg-dot" style="background:var(--ornament)"></span> 꾸밈음</div>
+    </div>
+  `;
+
+  versions.forEach((v, vi) => {
+    const pills = v.notes.map(n =>
+      `<span class="note-pill ${n.type}" title="${n.label}">${n.note}<span class="tooltip">${n.label}</span></span>`
+    ).join('');
+    html += `
+      <div class="fake-version">
+        <div class="version-label">${v.version}</div>
+        <div class="note-row">${pills}</div>
+        <div class="why-box">${v.why}</div>
+      </div>
+    `;
+    if (vi < versions.length - 1) html += '<div class="version-divider"></div>';
+  });
+
+  document.getElementById('result-panel').innerHTML = html;
+}
+
+buildKeys();
+</script>
+</body>
+</html>
