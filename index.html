@@ -1,22 +1,409 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JazzLick</title>
-    <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JazzLick — 재즈 색소폰 러닝 도구</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vexflow/4.2.2/vexflow.js"></script>
+<style>
+:root{--bg:#f5f6f8;--surface:#fff;--surface2:#f0f1f4;--border:#e4e6eb;--border2:#d0d3db;--text:#1a1d23;--text2:#5a5f6e;--text3:#9ea4b4;--primary:#5b6af0;--primary-h:#4856e0;--primary-bg:#eef0fd;--chord:#2b8fce;--chord-bg:#e8f4fb;--nonchord:#d07030;--nonchord-bg:#fdf0e4;--ornament:#2ea86e;--ornament-bg:#e4f7ee;--obbli:#9b5fc0;--obbli-bg:#f3eaf9;--v1:#e6832a;--v1-bg:#fff4e8;--v2:#5b6af0;--v2-bg:#eef0fd;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04);--shadow-sm:0 1px 2px rgba(0,0,0,.06);--radius:12px;--radius-sm:8px;--nav-h:60px;}
+[data-theme="dark"]{--bg:#0f1117;--surface:#1a1d27;--surface2:#242838;--border:#2c3044;--border2:#3a3f58;--text:#e8eaf0;--text2:#8890a8;--text3:#4a5068;--primary:#7c8ef5;--primary-h:#9aaaf7;--primary-bg:#1e2245;--chord:#4aa8e0;--chord-bg:#0d2535;--nonchord:#e09050;--nonchord-bg:#2a1c0a;--ornament:#44c882;--ornament-bg:#0a2818;--obbli:#c07af0;--obbli-bg:#2a1040;--v1:#f09840;--v1-bg:#2a1a08;--v2:#7c8ef5;--v2-bg:#1e2245;--shadow:0 1px 3px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.2);--shadow-sm:0 1px 2px rgba(0,0,0,.2);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR','Nunito',sans-serif;font-size:14px;line-height:1.6;min-height:100vh;transition:background .2s,color .2s;}
+nav{position:sticky;top:0;z-index:100;height:var(--nav-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;box-shadow:var(--shadow-sm);}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;margin-right:auto;}
+.nav-logo-icon{width:32px;height:32px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;}
+.nav-logo-text{font-family:'Nunito',sans-serif;font-weight:800;font-size:18px;color:var(--text);letter-spacing:-.02em;}
+.nav-logo-text span{color:var(--primary);}
+.nav-links{display:flex;align-items:center;gap:4px;margin-right:12px;}
+.nav-link{padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;transition:all .15s;}
+.nav-link:hover{background:var(--surface2);color:var(--text);}
+.profile-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);background:var(--surface2);cursor:pointer;margin-right:8px;transition:all .15s;}
+.profile-badge:hover{border-color:var(--border2);}
+.ollama-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text3);background:var(--surface2);cursor:pointer;transition:all .15s;margin-right:8px;}
+.ollama-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);}
+.ollama-badge.ok{color:#2ea86e;border-color:rgba(46,168,110,.3);background:rgba(46,168,110,.06);}
+.ollama-badge.ok .ollama-dot{background:#2ea86e;}
+.ollama-badge.err{color:#e05555;border-color:rgba(224,85,85,.3);background:rgba(224,85,85,.06);}
+.ollama-badge.err .ollama-dot{background:#e05555;}
+.theme-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;}
+.theme-btn:hover{border-color:var(--border2);color:var(--text);}
+.mode-tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:20px;}
+.mode-tab{flex:1;padding:13px 10px;border:none;background:transparent;cursor:pointer;font-size:13px;font-weight:600;font-family:'Noto Sans KR',sans-serif;color:var(--text2);transition:all .15s;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:3px;}
+.mode-tab:last-child{border-right:none;}
+.mode-tab .tab-icon{font-size:18px;}
+.mode-tab .tab-sub{font-size:10px;font-weight:400;color:var(--text3);}
+.mode-tab:hover{background:var(--surface2);color:var(--text);}
+.mode-tab.active{background:var(--primary-bg);color:var(--primary);}
+.page{max-width:1200px;margin:0 auto;padding:24px;}
+.two-col{display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.card-header-icon{width:28px;height:28px;background:var(--primary-bg);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--primary);flex-shrink:0;}
+.card-title{font-size:14px;font-weight:700;color:var(--text);}
+.card-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;}
+.s-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:7px;}
+.keyboard{display:flex;gap:4px;flex-wrap:wrap;}
+.key-w,.key-b{border-radius:6px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .1s;border:1px solid var(--border2);font-size:12px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.3;}
+.key-w{width:42px;height:52px;background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm);}
+.key-w:hover{background:var(--primary-bg);border-color:var(--primary);color:var(--primary);transform:translateY(-1px);}
+.key-b{width:36px;height:40px;background:var(--surface2);color:var(--text2);font-size:10px;}
+.key-b:hover{background:var(--primary-bg);border-color:var(--primary);color:var(--primary);}
+.key-w .kr{font-size:9px;opacity:.5;font-family:'Noto Sans KR',sans-serif;}
+.melody-bar{min-height:46px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.m-tag{display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:3px 8px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--text);}
+.m-tag button,.c-tag button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 0 0 2px;line-height:1;}
+.m-tag button:hover,.c-tag button:hover{color:#e05555;}
+.empty-hint{font-size:12px;color:var(--text3);font-style:italic;}
+.chord-bar{display:flex;flex-wrap:wrap;gap:6px;min-height:36px;align-items:center;}
+.c-tag{display:flex;align-items:center;gap:4px;background:var(--primary-bg);border:1px solid rgba(91,106,240,.25);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--primary);}
+.input-group{display:flex;gap:6px;}
+.inp{flex:1;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:'Noto Sans KR',sans-serif;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;}
+.inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(91,106,240,.12);}
+.inp::placeholder{color:var(--text3);}
+.hint-text{font-size:11px;color:var(--text3);margin-top:4px;}
+.select-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.select-label{font-size:12px;color:var(--text2);white-space:nowrap;}
+.inp-sm{padding:6px 10px;font-size:13px;width:auto;}
+.btn{padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;border:1px solid transparent;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary);}
+.btn-primary:hover{background:var(--primary-h);}
+.btn-ghost{background:transparent;border-color:var(--border2);color:var(--text2);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{font-size:12px;font-weight:600;padding:5px 13px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s;}
+.chip:hover{border-color:var(--primary);color:var(--primary);}
+.chip.on{background:var(--primary-bg);border-color:var(--primary);color:var(--primary);}
+.preset-row{display:flex;gap:6px;flex-wrap:wrap;}
+.preset-btn{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--border);border-radius:20px;background:var(--surface2);color:var(--text2);cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .12s;}
+.preset-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg);}
+.gen-btn{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;font-family:'Nunito','Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;box-shadow:0 2px 8px rgba(91,106,240,.3);}
+.gen-btn:hover{background:var(--primary-h);transform:translateY(-1px);}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.result-wrap{display:flex;flex-direction:column;gap:14px;}
+.result-empty-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:60px 40px;text-align:center;}
+.result-empty-icon{font-size:48px;opacity:.3;}
+.info-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 18px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;box-shadow:var(--shadow);}
+.info-badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text2);}
+.info-badge span{font-family:'JetBrains Mono',monospace;color:var(--text);}
+.legend{display:flex;gap:14px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;align-items:center;}
+.leg{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--text2);}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.version-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;animation:slideUp .3s ease forwards;opacity:0;}
+.version-card:nth-child(2){animation-delay:.1s;}
+.version-card:nth-child(3){animation-delay:.2s;}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.version-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface2);}
+.v-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.v-badge-1{background:var(--v1-bg);color:var(--v1);}
+.v-badge-2{background:var(--v2-bg);color:var(--v2);}
+.v-badge-ob{background:var(--obbli-bg);color:var(--obbli);}
+.v-name{font-size:13px;font-weight:700;color:var(--text);}
+.v-diff{margin-left:auto;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:3px;}
+.diff-dot{width:6px;height:6px;border-radius:50%;}
+.v-source{font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px;}
+.v-source.ollama{background:rgba(46,168,110,.12);color:#2ea86e;}
+.v-source.rule{background:rgba(91,106,240,.1);color:var(--primary);}
+.version-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+.note-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.note-pill{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;padding:5px 11px;border-radius:6px;cursor:default;position:relative;transition:transform .1s;border:1px solid transparent;}
+.note-pill:hover{transform:translateY(-2px);z-index:2;}
+.note-pill.chord{background:var(--chord-bg);color:var(--chord);border-color:rgba(43,143,206,.25);}
+.note-pill.nonchord{background:var(--nonchord-bg);color:var(--nonchord);border-color:rgba(208,112,48,.25);}
+.note-pill.ornament{background:var(--ornament-bg);color:var(--ornament);border-color:rgba(46,168,110,.25);}
+.note-pill.obbligato{background:var(--obbli-bg);color:var(--obbli);border-color:rgba(155,95,192,.25);}
+.note-pill .tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);border-radius:5px;padding:4px 8px;font-size:11px;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;pointer-events:none;z-index:10;}
+.note-pill:hover .tip{display:block;}
+.sustain-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.sustain-note{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text);background:var(--chord-bg);border:1px solid rgba(43,143,206,.3);border-radius:6px;padding:4px 12px;}
+.why-box{padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border-left:3px solid var(--primary);font-size:13px;line-height:1.7;color:var(--text2);}
+.why-box.why-ob{border-left-color:var(--obbli);}
+.loading-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 40px;}
+.dots{display:flex;gap:6px;}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--primary);animation:bounce 1.2s infinite ease-in-out;}
+.dots span:nth-child(2){animation-delay:.2s;}
+.dots span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{transform:scale(.5);opacity:.4}40%{transform:scale(1);opacity:1}}
+.score-wip-banner{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fffbea;border:1px solid #f0d060;border-radius:var(--radius-sm);font-size:13px;color:#7a6010;}
+[data-theme="dark"] .score-wip-banner{background:#2a2408;border-color:#6a5010;color:#d4a820;}
+.wip-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#f0d060;color:#7a6010;white-space:nowrap;}
+.score-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.score-toolbar{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;background:var(--surface2);}
+.score-area{padding:20px;min-height:180px;overflow-x:auto;}
+.score-area svg{max-width:100%;}
+.score-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px;color:var(--text3);text-align:center;}
+.score-full-page{display:flex;flex-direction:column;gap:20px;}
+.fb-bar{display:flex;align-items:center;gap:10px;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface2);}
+.fb-label{font-size:12px;color:var(--text3);}
+.fb-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px;transition:transform .1s,background .1s;}
+.fb-btn:hover{transform:scale(1.2);background:var(--surface);}
+.fb-thanks{font-size:12px;color:var(--text2);}
+.fb-edit-btn{font-size:12px;font-weight:600;padding:5px 12px;border:1px solid var(--primary);border-radius:6px;background:var(--primary-bg);color:var(--primary);cursor:pointer;margin-left:6px;}
+.fb-edit-btn:hover{background:var(--primary);color:#fff;}
+#edit-modal{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .25s;}
+#edit-modal.show{opacity:1;}
+.edit-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);}
+.edit-modal-box{position:relative;background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 40px rgba(0,0,0,.2);width:min(560px,96vw);max-height:90vh;overflow-y:auto;transform:translateY(16px);transition:transform .25s;}
+#edit-modal.show .edit-modal-box{transform:translateY(0);}
+.edit-modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.edit-modal-title{font-size:15px;font-weight:700;}
+.edit-close-btn{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:2px 6px;}
+.edit-close-btn:hover{color:var(--text);}
+.edit-modal-body{padding:20px;display:flex;flex-direction:column;gap:16px;}
+.edit-section{display:flex;flex-direction:column;gap:6px;}
+.edit-desc{font-size:13px;color:var(--text2);line-height:1.7;}
+.edit-system-notes{font-family:'JetBrains Mono',monospace;font-size:13px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text2);}
+.edit-modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+#onboarding-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;}
+#onboarding-overlay.ob-fade-out{opacity:0;transition:opacity .4s;}
+.ob-backdrop{position:absolute;inset:0;background:rgba(10,10,20,.7);backdrop-filter:blur(4px);}
+.ob-modal{position:relative;background:var(--surface);border-radius:16px;width:min(560px,96vw);max-height:90vh;overflow-y:auto;padding:40px 36px;box-shadow:0 16px 60px rgba(0,0,0,.3);}
+.ob-step{display:flex;flex-direction:column;align-items:center;text-align:center;}
+.ob-logo{font-size:48px;margin-bottom:16px;}
+.ob-step-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.ob-title{font-family:'Nunito',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:-.02em;}
+.ob-desc{font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:28px;}
+.ob-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;margin-bottom:8px;}
+.ob-grid-2{grid-template-columns:repeat(2,1fr);}
+.ob-option-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif;}
+.ob-option-btn:hover{border-color:var(--primary);background:var(--primary-bg);}
+.ob-option-btn.selected{border-color:var(--primary);background:var(--primary-bg);box-shadow:0 0 0 3px rgba(91,106,240,.15);}
+.ob-opt-icon{font-size:22px;}
+.ob-opt-label{font-size:13px;font-weight:700;color:var(--text);}
+.ob-opt-sub{font-size:11px;color:var(--text3);}
+.ob-next-btn{padding:13px 36px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;transition:all .15s;box-shadow:0 2px 8px rgba(91,106,240,.3);}
+.ob-next-btn:hover{background:var(--primary-h);transform:translateY(-1px);}
+footer{margin-top:48px;border-top:1px solid var(--border);padding:18px 24px;text-align:center;font-size:12px;color:var(--text3);}
+@media(max-width:768px){.two-col{grid-template-columns:1fr;}.nav-links{display:none;}.ob-grid{grid-template-columns:1fr;}}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>JazzLick</h1>
-        <p>재즈 색소폰을 위한 로컬 하이브리드 멜로디 생성기</p>
-        
-        <div id="app"></div>
+
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">♪</div>
+    <span class="nav-logo-text">Jazz<span>Lick</span></span>
+  </a>
+  <div class="nav-links">
+    <button class="nav-link" onclick="showGuide()">사용법</button>
+    <button class="nav-link" onclick="showAbout()">소개</button>
+  </div>
+  <div class="profile-badge" id="profile-badge" onclick="resetProfile()">👤 <span id="profile-label">프로필</span></div>
+  <div class="ollama-badge" id="ollama-badge" onclick="toggleSetup()">
+    <span class="ollama-dot" id="ollama-dot"></span>
+    <span id="ollama-label">확인 중...</span>
+  </div>
+  <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀️</button>
+</nav>
+
+<div class="page">
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-fake" onclick="switchMode('fake')">
+      <span class="tab-icon">🎵</span><span>멜로디 페이크</span>
+      <span class="tab-sub">1절 꾸밈음 · 2절 애드립</span>
+    </button>
+    <button class="mode-tab" id="tab-obbli" onclick="switchMode('obbli')">
+      <span class="tab-icon">🎷</span><span>오블리가토</span>
+      <span class="tab-sub">긴 음 채움 선율</span>
+    </button>
+    <button class="mode-tab" id="tab-score" onclick="switchMode('score')">
+      <span class="tab-icon">📄</span><span>악보 보기</span>
+      <span class="tab-sub" style="color:#b89a20;">🚧 개발 중</span>
+    </button>
+  </div>
+
+  <div class="two-col" id="main-two-col">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <div class="card" id="melody-card">
+        <div class="card-header"><div class="card-header-icon">🎵</div><span class="card-title">원곡 멜로디</span></div>
+        <div class="card-body">
+          <div>
+            <div class="s-label">건반으로 입력</div>
+            <div class="keyboard" id="key-btns"></div>
+          </div>
+          <div class="melody-bar" id="melody-display">
+            <span class="empty-hint" id="mel-hint">음표를 눌러 입력하세요</span>
+          </div>
+          <div>
+            <div class="s-label">텍스트로 입력</div>
+            <div class="input-group">
+              <input class="inp" type="text" id="manual-in" placeholder="도레미 또는 C D E 후 Enter" />
+              <button class="btn btn-primary" onclick="parseManual()">추가</button>
+              <button class="btn btn-ghost" onclick="clearMelody()">초기화</button>
+            </div>
+            <p class="hint-text">도레미 / C D E / 섞어서 모두 인식</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">🎼</div><span class="card-title">코드 진행</span></div>
+        <div class="card-body">
+          <div class="chord-bar" id="chord-display">
+            <span class="empty-hint" id="chord-hint">코드를 추가하세요</span>
+          </div>
+          <div class="input-group">
+            <input class="inp" type="text" id="chord-in" placeholder="예: Cmaj7" />
+            <button class="btn btn-primary" onclick="addChord()">추가</button>
+            <button class="btn btn-ghost" onclick="clearChords()">초기화</button>
+          </div>
+          <div>
+            <div class="s-label">자주 쓰는 진행</div>
+            <div class="preset-row">
+              <button class="preset-btn" onclick="loadChords(['Cmaj7','Am7','Dm7','G7'])">ii–V–I (C)</button>
+              <button class="preset-btn" onclick="loadChords(['Fmaj7','Em7','Am7','G7'])">팝 4도</button>
+              <button class="preset-btn" onclick="loadChords(['Cm7','F7','Bbmaj7','Ebmaj7'])">블루스</button>
+              <button class="preset-btn" onclick="loadChords(['Dmaj7','Bm7','Em7','A7'])">ii–V–I (D)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="obbli-options" style="display:none;">
+        <div class="card-header"><div class="card-header-icon">⏱️</div><span class="card-title">오블리가토 설정</span></div>
+        <div class="card-body">
+          <div>
+            <div class="s-label">긴 음 (끌어주는 음)</div>
+            <input class="inp" type="text" id="sustain-note" placeholder="예: G, C, E" />
+            <p class="hint-text">멜로디에서 길게 유지되는 음</p>
+          </div>
+          <div>
+            <div class="s-label">박자 수</div>
+            <div class="chips" id="beat-group">
+              <button class="chip" data-b="2" onclick="setBeat(this)">2박</button>
+              <button class="chip on" data-b="3" onclick="setBeat(this)">3박</button>
+              <button class="chip" data-b="4" onclick="setBeat(this)">4박</button>
+            </div>
+          </div>
+          <div>
+            <div class="s-label">해당 마디 코드</div>
+            <input class="inp" type="text" id="obbli-chord" placeholder="예: Cmaj7, G7" />
+            <p class="hint-text">긴 음이 나오는 마디의 코드</p>
+          </div>
+          <div>
+            <div class="s-label">분위기</div>
+            <div class="chips" id="obbli-feel-group">
+              <button class="chip on" data-f="lyrical" onclick="setFeel(this)">서정적</button>
+              <button class="chip" data-f="jazzy" onclick="setFeel(this)">재즈풍</button>
+              <button class="chip" data-f="gospel" onclick="setFeel(this)">가스펠</button>
+              <button class="chip" data-f="active" onclick="setFeel(this)">활발하게</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="style-card">
+        <div class="card-header"><div class="card-header-icon">🎷</div><span class="card-title">스타일 & 기법</span></div>
+        <div class="card-body">
+          <div>
+            <div class="s-label">연주 스타일</div>
+            <div class="chips" id="style-group">
+              <button class="chip on" data-s="jazz" onclick="setStyle(this)">재즈 페이크</button>
+              <button class="chip" data-s="ballad" onclick="setStyle(this)">발라드</button>
+              <button class="chip" data-s="bebop" onclick="setStyle(this)">비밥</button>
+              <button class="chip" data-s="gospel" onclick="setStyle(this)">가스펠/소울</button>
+            </div>
+          </div>
+          <div>
+            <div class="s-label">추가 기법</div>
+            <div class="chips" id="tech-group">
+              <button class="chip on" data-t="grace" onclick="toggleTech(this)">앞꾸밈음</button>
+              <button class="chip on" data-t="passing" onclick="toggleTech(this)">경과음</button>
+              <button class="chip on" data-t="neighbor" onclick="toggleTech(this)">보조음</button>
+              <button class="chip" data-t="turn" onclick="toggleTech(this)">돌음</button>
+              <button class="chip" data-t="anticipation" onclick="toggleTech(this)">당김음</button>
+              <button class="chip" data-t="delay" onclick="toggleTech(this)">지연음</button>
+            </div>
+          </div>
+          <div>
+            <div class="s-label">조성 & 박자</div>
+            <div class="select-row">
+              <span class="select-label">Key</span>
+              <select class="inp inp-sm" id="key-select" style="width:80px;">
+                <option value="">자동</option>
+                <option>C</option><option>D</option><option>Eb</option>
+                <option>F</option><option>G</option><option>Ab</option><option>Bb</option>
+              </select>
+              <span class="select-label" style="margin-left:8px;">박자</span>
+              <select class="inp inp-sm" id="meter-select" style="width:80px;">
+                <option value="4/4">4/4</option><option value="3/4">3/4</option><option value="6/8">6/8</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="gen-btn" id="gen-btn" onclick="generate()">✦ 생성하기</button>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/vexflow.min.js"></script>
-    
-    <!-- 🔥 여기서 type="module"이 핵심입니다 -->
-    <script type="module" src="js/main.js"></script>
+    <div class="result-wrap" id="result-wrap">
+      <div class="result-empty-card">
+        <div class="result-empty-icon">♩</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text2);">결과가 여기에 표시됩니다</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.9;">왼쪽에서 입력 후<br><strong style="color:var(--primary)">✦ 생성하기</strong> 버튼을 눌러주세요</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="score-panel" style="display:none;">
+    <div class="score-full-page">
+      <div class="score-wip-banner"><span class="wip-badge">🚧 개발 중</span> 악보 기능 개발 중입니다.</div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">📝</div><span class="card-title">음표 입력</span></div>
+        <div class="card-body">
+          <div>
+            <div class="s-label">음표 (스페이스로 구분)</div>
+            <div class="input-group">
+              <input class="inp" type="text" id="score-notes-in" placeholder="예: C4 D4 E4 G4 A4 C5" />
+              <button class="btn btn-primary" onclick="drawScore()">악보 그리기</button>
+              <button class="btn btn-ghost" onclick="clearScore()">초기화</button>
+            </div>
+            <p class="hint-text">C4 = 가온다 · C5 = 한 옥타브 위</p>
+          </div>
+          <div>
+            <div class="s-label">예시</div>
+            <div class="preset-row">
+              <button class="preset-btn" onclick="loadScoreExample('C4 D4 E4 F4 G4 A4 B4 C5')">C 장음계</button>
+              <button class="preset-btn" onclick="loadScoreExample('C4 E4 G4 B4 D5 F5 A5')">Cmaj7 아르페지오</button>
+              <button class="preset-btn" onclick="loadScoreExample('D4 E4 F4 G4 A4 Bb4 C5 D5')">D 도리안</button>
+            </div>
+          </div>
+          <div>
+            <div class="s-label">조표 & 박자</div>
+            <div class="select-row">
+              <span class="select-label">조표</span>
+              <select class="inp inp-sm" id="score-key" style="width:80px;"><option>C</option><option>G</option><option>F</option><option>D</option><option>Bb</option></select>
+              <span class="select-label" style="margin-left:10px;">박자</span>
+              <select class="inp inp-sm" id="score-meter" style="width:80px;"><option>4/4</option><option>3/4</option><option>6/8</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="score-container">
+        <div class="score-toolbar">
+          <span style="font-size:12px;font-weight:600;color:var(--text2);">🎼 악보 미리보기</span>
+          <button class="btn btn-ghost" style="margin-left:auto;font-size:12px;" onclick="downloadScore()">↓ SVG 저장</button>
+        </div>
+        <div class="score-area" id="score-area">
+          <div class="score-empty"><div style="font-size:36px;opacity:.3;">🎼</div><div style="font-size:13px;">음표를 입력하고 "악보 그리기"를 눌러주세요</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>JazzLick — 색소폰 연주자를 위한 멜로디 페이크 & 오블리가토 학습 도구 &nbsp;·&nbsp; 완전 로컬 · 무료</footer>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/rule-engine.js"></script>
+<script src="js/ollama.js"></script>
+<script src="js/hybrid-engine.js"></script>
+<script src="js/firebase.js"></script>
+<script src="js/onboarding.js"></script>
+<script src="js/feedback.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
