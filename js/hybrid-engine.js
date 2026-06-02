@@ -27,8 +27,10 @@ const HybridEngine = (() => {
   }
 
   const STYLE_KEY_MAP = {
-    '재즈 페이크': 'jazz', '발라드': 'ballad', '비밥': 'bebop', '가스펠/소울': 'gospel',
+    '재즈 페이크':'jazz', '발라드':'ballad', '비밥':'bebop', '가스펠/소울':'gospel',
+    '라틴 재즈':'latin', '퓨전':'fusion', '스윙':'swing',
     'jazz':'jazz', 'ballad':'ballad', 'bebop':'bebop', 'gospel':'gospel',
+    'latin':'latin', 'fusion':'fusion', 'swing':'swing',
   };
 
   async function generateFake({ melody, chords, style, techniques, keyStr, meter }) {

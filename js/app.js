@@ -14,7 +14,7 @@ let curMode   = 'fake';
 let activeTech = new Set(['grace', 'passing', 'neighbor']);
 let setupVisible = false;
 
-const STYLE_LABELS = { jazz:'재즈 페이크', ballad:'발라드', bebop:'비밥', gospel:'가스펠/소울' };
+const STYLE_LABELS = { jazz:'재즈 페이크', ballad:'발라드', bebop:'비밥', gospel:'가스펠/소울', latin:'라틴 재즈', fusion:'퓨전', swing:'스윙' };
 const TECH_LABELS  = { grace:'앞꾸밈음', passing:'경과음', neighbor:'보조음', turn:'돌음', anticipation:'당김음', delay:'지연음' };
 const FEEL_LABELS  = { lyrical:'서정적', jazzy:'재즈풍', gospel:'가스펠', active:'활발하게' };
 
@@ -106,8 +106,8 @@ function switchMode(mode) {
   ['fake','obbli'].forEach(m => {
     document.getElementById(`tab-${m}`).classList.toggle('active', m === mode);
   });
-  document.getElementById('melody-card').style.display  = mode === 'fake' ? '' : 'none';
-  document.getElementById('style-card').style.display   = mode === 'fake' ? '' : 'none';
+  document.getElementById('melody-card').style.display   = mode === 'fake'  ? '' : 'none';
+  document.getElementById('style-card').style.display    = mode === 'fake'  ? '' : 'none';
   document.getElementById('obbli-options').style.display = mode === 'obbli' ? '' : 'none';
   const btn = document.getElementById('gen-btn');
   btn.textContent = mode === 'fake' ? '✦ 멜로디 페이크 생성' : '✦ 오블리가토 생성';
@@ -165,9 +165,9 @@ function parseManual() {
 document.getElementById('manual-in').addEventListener('keydown', e => { if (e.key === 'Enter') parseManual(); });
 
 function addChord() {
-  const v = document.getElementById('chord-in').value.trim();
-  if (!v) return;
-  chords.push(v);
+  const raw = document.getElementById('chord-in').value.trim();
+  if (!raw) return;
+  raw.split(/[\s,]+/).filter(Boolean).forEach(c => chords.push(c));
   document.getElementById('chord-in').value = '';
   renderChords();
 }
@@ -269,7 +269,9 @@ async function generateObbli() {
 
 function renderFakeResult({ v1, v2, _meta }) {
   const diffColor = { 쉬움:'#2ea86e', 보통:'#e6832a', 도전:'#e05555' };
-  
+  const keyStr   = document.getElementById('key-select').value || 'C';
+  const meterStr = document.getElementById('meter-select').value || '4/4';
+
   FeedbackUI.setContext('fake', { melody, chords, style: STYLE_LABELS[selStyle] }, [v1, v2]);
 
   let html = `
@@ -287,13 +289,17 @@ function renderFakeResult({ v1, v2, _meta }) {
     </div>`;
 
   let versionIdx = 0;
-  [{ data: v1, badge: 'v-badge-1', label: '1절' }, { data: v2, badge: 'v-badge-2', label: '2절' }].forEach(item => {
-    const v = item.data;
+  [
+    { data:v1, badge:'v-badge-1', label:'1절', scoreId:'score-v1' },
+    { data:v2, badge:'v-badge-2', label:'2절', scoreId:'score-v2' },
+  ].forEach(item => {
+    const v     = item.data;
     const pills = (v.notes || []).map(n =>
       `<span class="note-pill ${n.type}">${n.note}<span class="tip">${n.label}</span></span>`
     ).join('');
-    const dc = diffColor[v.difficulty] || 'var(--text3)';
+    const dc  = diffColor[v.difficulty] || 'var(--text3)';
     const src = v.source === 'ollama' ? '<span class="v-source ollama">AI</span>' : '<span class="v-source rule">규칙</span>';
+
     html += `
       <div class="version-card">
         <div class="version-head">
@@ -307,13 +313,25 @@ function renderFakeResult({ v1, v2, _meta }) {
           <div class="why-box">${v.why || ''}</div>
           ${FeedbackUI.renderBar(versionIdx)}
         </div>
+      </div>
+      <div class="inline-score-card" style="animation-delay:${(versionIdx + 1) * 0.12}s">
+        <div class="inline-score-head">
+          <span style="font-size:12px;font-weight:700;color:#555;">🎼 ${item.label} 악보</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="downloadInlineScore('${item.scoreId}','${item.label}')">↓ SVG</button>
+        </div>
+        <div class="inline-score-area" id="${item.scoreId}">
+          <div style="font-size:12px;color:#aaa;padding:8px;">렌더링 중...</div>
+        </div>
       </div>`;
     versionIdx++;
   });
 
-  html += renderFakeResultScore(v1, v2);
-
   document.getElementById('result-wrap').innerHTML = html;
+
+  setTimeout(() => {
+    renderInlineScore(document.getElementById('score-v1'), v1.notes, keyStr, meterStr);
+    renderInlineScore(document.getElementById('score-v2'), v2.notes, keyStr, meterStr);
+  }, 80);
 }
 
 function renderObbliResult({ patterns, _meta }, sustainNote, chord) {
@@ -360,151 +378,6 @@ function renderObbliResult({ patterns, _meta }, sustainNote, chord) {
   document.getElementById('result-wrap').innerHTML = html;
 }
 
-function renderFakeResultScore(v1, v2) {
-  try {
-    const v1Notes = (v1.notes || []).map(n => n.note).join(' ');
-    const v2Notes = (v2.notes || []).map(n => n.note).join(' ');
-    
-    if (!v1Notes || !v2Notes) return '';
-
-    let scoreHtml = `
-      <div class="card" style="margin-top:20px;">
-        <div class="card-header" style="background:var(--primary-bg);">
-          <div class="card-header-icon">🎼</div>
-          <span class="card-title">악보 보기</span>
-        </div>
-        <div class="card-body">
-          <div style="display:flex;gap:20px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:300px;">
-              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">1절 악보</div>
-              <div id="score-v1" class="score-container" style="border:1px solid var(--border);border-radius:var(--radius-sm);">
-                <div class="score-area" id="score-area-v1" style="min-height:150px;">
-                  <div class="score-empty"><div style="font-size:24px;opacity:.3;">♩</div></div>
-                </div>
-              </div>
-            </div>
-            <div style="flex:1;min-width:300px;">
-              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">2절 악보</div>
-              <div id="score-v2" class="score-container" style="border:1px solid var(--border);border-radius:var(--radius-sm);">
-                <div class="score-area" id="score-area-v2" style="min-height:150px;">
-                  <div class="score-empty"><div style="font-size:24px;opacity:.3;">♩</div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    
-    setTimeout(() => {
-      drawScoreInElement(v1Notes, 'score-area-v1');
-      drawScoreInElement(v2Notes, 'score-area-v2');
-    }, 100);
-    
-    return scoreHtml;
-  } catch (e) {
-    console.error('악보 렌더링 오류:', e);
-    return '';
-  }
-}
-
-function drawScoreInElement(notesStr, elementId) {
-  try {
-    const notes = parseNoteInputForScore(notesStr);
-    if (!notes.length) {
-      const area = document.getElementById(elementId);
-      if (area) area.innerHTML = `<div style="padding:20px;color:#e6832a;font-size:13px;">음표를 인식할 수 없습니다</div>`;
-      return;
-    }
-    
-    const keyStr  = document.getElementById('key-select').value || 'C';
-    const meterStr = document.getElementById('meter-select').value || '4/4';
-    const [beats] = meterStr.split('/').map(Number);
-    const area = document.getElementById(elementId);
-    
-    if (!area) return;
-    
-    area.innerHTML = '<div id="vex-' + elementId + '" style="display:inline-block;"></div>';
-    
-    const VF = Vex.Flow;
-    const containerW = Math.max(area.clientWidth - 20, 300);
-    const barsPerRow = Math.max(1, Math.floor(containerW / 140));
-    
-    const bars = [];
-    for (let i = 0; i < notes.length; i += beats) {
-      const bar = notes.slice(i, i + beats);
-      while (bar.length < beats) bar.push({ keys: ['b/4'], duration: 'qr' });
-      bars.push(bar);
-    }
-    
-    const rows = [];
-    for (let i = 0; i < bars.length; i += barsPerRow) rows.push(bars.slice(i, i + barsPerRow));
-    
-    const barW = Math.floor((containerW - 40) / Math.min(bars.length, barsPerRow));
-    const totalH = rows.length * 120 + 20;
-    
-    const renderer = new VF.Renderer('vex-' + elementId, VF.Renderer.Backends.SVG);
-    renderer.resize(containerW, totalH);
-    const ctx = renderer.getContext();
-    
-    rows.forEach((rowBars, ri) => {
-      let xOffset = 10;
-      rowBars.forEach((barNotes, bi) => {
-        const stave = new VF.Stave(xOffset, ri * 120 + 20, barW);
-        if (bi === 0) { 
-          stave.addClef('treble'); 
-          if (ri === 0) { 
-            stave.addKeySignature(keyStr); 
-            stave.addTimeSignature(meterStr); 
-          } 
-        }
-        stave.setContext(ctx).draw();
-        
-        const vfNotes = barNotes.map(n => new VF.StaveNote(n));
-        vfNotes.forEach((vn) => {
-          const k = vn.getKeys()[0];
-          if (k.includes('#')) vn.addModifier(new VF.Accidental('#'), 0);
-          else if (k.includes('b') && !k.startsWith('b/')) vn.addModifier(new VF.Accidental('b'), 0);
-        });
-        
-        const formatter = new VF.Formatter();
-        formatter.joinVoices([vfNotes]);
-        formatter.formatToStave([vfNotes], stave);
-        vfNotes.forEach(note => note.setContext(ctx).draw());
-        
-        xOffset += barW;
-      });
-    });
-  } catch (e) {
-    console.error('악보 그리기 오류:', e.message, e.stack);
-    const area = document.getElementById(elementId);
-    if (area) area.innerHTML = `<div style="padding:20px;color:#e05555;font-size:13px;">악보 렌더링 오류: ${e.message}</div>`;
-  }
-}
-
-function parseNoteInputForScore(notesStr) {
-  const NOTE_MAP = { 'Bb':'bb','Eb':'eb','Ab':'ab','Db':'db','Gb':'gb','Fs':'f#','Cs':'c#','Ds':'d#','Gs':'g#','As':'a#' };
-  
-  return notesStr.trim().split(/[\s,]+/).filter(Boolean).map(tok => {
-    let enNote = tok;
-    if (KR2EN[tok]) enNote = KR2EN[tok];
-    
-    if (enNote && !enNote.match(/\d/)) enNote = enNote + '4';
-    
-    const m = enNote.match(/^([A-Ga-g])([#b]?)(\d)$/);
-    if (!m) return null;
-    
-    let [, noteName, accidental, octave] = m;
-    const upperNote = noteName.toUpperCase();
-    
-    let noteKey = upperNote.toLowerCase();
-    if (accidental === '#') noteKey = noteKey + '#';
-    else if (accidental === 'b') noteKey = noteKey + 'b';
-    
-    const vexKey = `${noteKey}/${octave}`;
-    return { keys: [vexKey], duration: 'q' };
-  }).filter(Boolean);
-}
-
 function showLoading(msg) {
   document.getElementById('result-wrap').innerHTML = `
     <div class="loading-card">
@@ -526,5 +399,115 @@ function showGuide() {
 }
 
 function showAbout() {
-  alert('🎷 JazzLick\n\n재즈/색소폰 연주자를 위한 멜로디 페이크 학습 도구입니다.\n\n• 규칙 기반 엔진: 재즈 이론으로 정확하고 빠르게\n• Ollama AI: 더 창의적인 2절·오블리가토 생성\n• 악보 자동 표시: 결과를 악보로 즉시 확인\n• 완전 로컬 · 무료 · 외부 API 없음');
+  alert('🎷 MelodyFake\n\n재즈/색소폰 연주자를 위한 멜로디 페이크 학습 도구입니다.\n\n• 규칙 기반 엔진: 재즈 이론으로 정확하고 빠르게\n• Ollama AI: 더 창의적인 2절·오블리가토 생성\n• 완전 로컬 · 무료 · 외부 API 없음\n\n개발 중인 기능: 악보 자동 변환, PDF 내보내기');
+}
+
+function assignOctaves(noteNames, startOctave = 4) {
+  const CHROM = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const result = [];
+  let prevMidi = -1;
+  noteNames.forEach(name => {
+    const norm = (window.RuleEngine ? RuleEngine.normalizeNote(name) : name);
+    const pc   = CHROM.indexOf(norm);
+    if (pc === -1) { result.push({ note: norm, octave: startOctave }); return; }
+    let octave = startOctave;
+    if (prevMidi !== -1) {
+      const baseOct = Math.round((prevMidi - pc) / 12);
+      let best = startOctave, bestDist = 999;
+      for (let o = Math.max(2, baseOct - 1); o <= Math.min(7, baseOct + 2); o++) {
+        const midi = pc + (o + 1) * 12;
+        const dist = Math.abs(midi - prevMidi);
+        if (dist < bestDist) { bestDist = dist; best = o; }
+      }
+      octave = best;
+    }
+    prevMidi = pc + (octave + 1) * 12;
+    result.push({ note: norm, octave });
+  });
+  return result;
+}
+
+function renderInlineScore(containerEl, noteObjs, keyStr = 'C', meterStr = '4/4') {
+  if (!containerEl || !noteObjs || !noteObjs.length) {
+    if (containerEl) containerEl.innerHTML = '<div style="padding:12px;font-size:12px;color:#aaa;text-align:center;">음표 없음</div>';
+    return;
+  }
+  try {
+    const noteNames  = noteObjs.map(n => n.note);
+    const withOcts   = assignOctaves(noteNames);
+    const [bpb]      = meterStr.split('/').map(Number);
+    const epb        = bpb * 2;
+    const TYPE_COLORS = { chord:'#2b8fce', nonchord:'#d07030', ornament:'#2ea86e' };
+
+    const rawNotes = withOcts.map((item, i) => {
+      const lower    = item.note.toLowerCase();
+      const hasSharp = lower.includes('#');
+      return { key:`${lower}/${item.octave}`, hasSharp, type: noteObjs[i].type, dur:'8' };
+    });
+
+    const bars = [];
+    for (let i = 0; i < rawNotes.length; i += epb) {
+      const bar = rawNotes.slice(i, i + epb);
+      while (bar.length < epb) bar.push({ key:'b/4', hasSharp:false, type:'rest', dur:'8r' });
+      bars.push(bar);
+    }
+    if (!bars.length) return;
+
+    const VF         = Vex.Flow;
+    const containerW = Math.max(containerEl.clientWidth - 32, 360);
+    const barsPerRow = Math.max(1, Math.min(4, Math.floor(containerW / 180)));
+    const rows       = [];
+    for (let i = 0; i < bars.length; i += barsPerRow) rows.push(bars.slice(i, i + barsPerRow));
+    const barW  = Math.floor((containerW - 80) / barsPerRow);
+    const rowH  = 100;
+    const totalH = rows.length * rowH + 30;
+
+    const vexDiv  = document.createElement('div');
+    vexDiv.id     = `vex-inner-${Date.now()}`;
+    containerEl.innerHTML = '';
+    containerEl.appendChild(vexDiv);
+
+    const renderer = new VF.Renderer(vexDiv.id, VF.Renderer.Backends.SVG);
+    renderer.resize(containerW, totalH);
+    const ctx = renderer.getContext();
+
+    rows.forEach((rowBars, ri) => {
+      let xOff = 20;
+      rowBars.forEach((barNotes, bi) => {
+        const isFirst = ri === 0 && bi === 0;
+        const stave   = new VF.Stave(xOff, ri * rowH + 20, barW);
+        if (bi === 0)  stave.addClef('treble');
+        if (isFirst) {
+          if (keyStr && keyStr !== 'C') stave.addKeySignature(keyStr);
+          stave.addTimeSignature(meterStr);
+        }
+        stave.setContext(ctx).draw();
+
+        const vfNotes = barNotes.map(nd => {
+          const sn = new VF.StaveNote({ keys:[nd.key], duration:nd.dur });
+          if (nd.hasSharp) sn.addModifier(new VF.Accidental('#'), 0);
+          if (nd.type && nd.type !== 'rest') {
+            const col = TYPE_COLORS[nd.type] || '#555';
+            sn.setStyle({ fillStyle:col, strokeStyle:col });
+          }
+          return sn;
+        });
+        VF.Formatter.FormatAndDraw(ctx, stave, vfNotes);
+        xOff += barW;
+      });
+    });
+  } catch (e) {
+    containerEl.innerHTML = `<div style="padding:10px;font-size:12px;color:#e05555;">악보 렌더링 오류: ${e.message}</div>`;
+  }
+}
+
+function downloadInlineScore(containerId, label) {
+  const el  = document.getElementById(containerId);
+  const svg = el ? el.querySelector('svg') : null;
+  if (!svg) { alert('악보가 없습니다.'); return; }
+  const blob = new Blob([svg.outerHTML], { type:'image/svg+xml' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `jazzlick-${label || 'score'}.svg`;
+  a.click();
 }
