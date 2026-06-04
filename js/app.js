@@ -70,17 +70,17 @@ async function retryOllama() {
 
 function updateOllamaBadge(state, model) {
   const badge = document.getElementById('ollama-badge');
-  const dot   = document.getElementById('ollama-dot');
   const label = document.getElementById('ollama-label');
   badge.className = 'ollama-badge';
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
   if (state === 'checking') {
-    label.textContent = '연결 확인 중...';
+    label.textContent = '확인 중...';
   } else if (state === 'ok') {
     badge.classList.add('ok');
     label.textContent = `AI: ${model || 'Ollama'}`;
   } else {
     badge.classList.add('err');
-    label.textContent = 'Ollama 미연결 (규칙 기반)';
+    label.textContent = isLocal ? 'Ollama 미연결 (규칙 기반)' : '규칙 기반 모드';
   }
 }
 

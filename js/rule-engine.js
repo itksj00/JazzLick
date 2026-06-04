@@ -494,9 +494,12 @@ function getBackCycleChords(s){
     {chord:indexToNote(ri)+'7',label:'V of target'},
   ];
 }
+const FLAT_PREF = { 'A#':'Bb','C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab' };
+function toJazzNote(note) { return FLAT_PREF[note] || note; }
+
 function backdoor(targetChord){
   const c=parseChord(targetChord); if(!c)return null;
-  return indexToNote((noteToIndex(c.root)-2+12)%12)+'7';
+  return toJazzNote(indexToNote((noteToIndex(c.root)-2+12)%12))+'7';
 }
 function getColtraneChanges(root){
   const ri=noteToIndex(normalizeNote(root)); if(ri===-1)return [];

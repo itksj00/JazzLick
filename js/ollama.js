@@ -1,4 +1,3 @@
-
 'use strict';
 
 const OllamaClient = (() => {
@@ -23,7 +22,16 @@ const OllamaClient = (() => {
   let _isAvailable = null; // null=미확인, true/false
 
 
+  function isLocalEnvironment() {
+    const h = window.location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || h === '' || h.endsWith('.local');
+  }
+
   async function checkAvailability() {
+    if (!isLocalEnvironment()) {
+      _isAvailable = false;
+      return false;
+    }
     try {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 3000);
