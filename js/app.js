@@ -12,16 +12,14 @@ let selBeat   = '3';
 let selFeel   = 'lyrical';
 let curMode   = 'fake';
 let activeTech = new Set(['grace', 'passing', 'neighbor']);
-let setupVisible = false;
 
 const STYLE_LABELS = { jazz:'재즈 페이크', ballad:'발라드', bebop:'비밥', gospel:'가스펠/소울', latin:'라틴 재즈', fusion:'퓨전', swing:'스윙' };
 const TECH_LABELS  = { grace:'앞꾸밈음', passing:'경과음', neighbor:'보조음', turn:'돌음', anticipation:'당김음', delay:'지연음' };
 const FEEL_LABELS  = { lyrical:'서정적', jazzy:'재즈풍', gospel:'가스펠', active:'활발하게' };
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   buildKeys();
   applySystemTheme();
-  await initOllama();
   FB.configure({
     apiKey: "AIzaSyDB34Il0rIQWU7M5UXfTB8geTxosAscBQc",
     authDomain: "jazzlick-90cd0.firebaseapp.com",
@@ -31,19 +29,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     appId: "1:180782187928:web:06f10fecdc2caec007d7ed"
   });
   if (Onboarding.needsOnboarding()) {
-    Onboarding.show((profile) => {
-      updateProfileBadge(profile);
-    });
+    Onboarding.show((profile) => updateProfileBadge(profile));
   } else {
     updateProfileBadge(FB.getUserProfile());
   }
 });
-
-async function initOllama() {
-  updateOllamaBadge('checking');
-  const status = await HybridEngine.init();
-  updateOllamaBadge(status.available ? 'ok' : 'err', status.model);
-}
 
 function updateProfileBadge(profile) {
   if (!profile) return;
@@ -58,35 +48,6 @@ function resetProfile() {
   if (!confirm('프로필을 다시 설정하시겠어요?')) return;
   localStorage.removeItem('jl_profile');
   Onboarding.show((profile) => updateProfileBadge(profile));
-}
-
-async function retryOllama() {
-  const url = document.getElementById('ollama-url').value.trim();
-  if (url) OllamaClient.setBaseUrl(url);
-  updateOllamaBadge('checking');
-  const status = await HybridEngine.init();
-  updateOllamaBadge(status.available ? 'ok' : 'err', status.model);
-}
-
-function updateOllamaBadge(state, model) {
-  const badge = document.getElementById('ollama-badge');
-  const label = document.getElementById('ollama-label');
-  badge.className = 'ollama-badge';
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
-  if (state === 'checking') {
-    label.textContent = '확인 중...';
-  } else if (state === 'ok') {
-    badge.classList.add('ok');
-    label.textContent = `AI: ${model || 'Ollama'}`;
-  } else {
-    badge.classList.add('err');
-    label.textContent = isLocal ? 'Ollama 미연결 (규칙 기반)' : '규칙 기반 모드';
-  }
-}
-
-function toggleSetup() {
-  setupVisible = !setupVisible;
-  document.getElementById('setup-card').classList.toggle('show', setupVisible);
 }
 
 function applySystemTheme() {
@@ -224,15 +185,10 @@ async function generateFake() {
   showLoading('페이크 버전 생성 중...');
 
   try {
-    const result = await HybridEngine.generateFake({
-      melody,
-      chords,
-      style: STYLE_LABELS[selStyle],
-      techniques: activeTech,
-      keyStr: document.getElementById('key-select').value || '',
-      meter: document.getElementById('meter-select').value,
-    });
-    renderFakeResult(result);
+    const styleKey = Object.keys(STYLE_LABELS).find(k => STYLE_LABELS[k] === STYLE_LABELS[selStyle]) || selStyle;
+    const v1 = RuleEngine.generateV1(melody, chords, activeTech, styleKey);
+    const v2 = RuleEngine.generateV2Fallback(melody, chords, activeTech, styleKey);
+    renderFakeResult({ v1, v2 });
   } catch (e) {
     showError(e.message);
   }
@@ -252,14 +208,10 @@ async function generateObbli() {
   showLoading('오블리가토 선율 생성 중...');
 
   try {
-    const result = await HybridEngine.generateObbli({
-      sustainNote,
-      beats: selBeat,
-      chord: obbliChord,
-      chords,
-      feel: FEEL_LABELS[selFeel],
-    });
-    renderObbliResult(result, sustainNote, obbliChord);
+    const patterns = RuleEngine.generateObbliRule(
+      sustainNote, selBeat, obbliChord, selStyle, FEEL_LABELS[selFeel]
+    );
+    renderObbliResult({ patterns }, sustainNote, obbliChord);
   } catch (e) {
     showError(e.message);
   }
@@ -267,7 +219,7 @@ async function generateObbli() {
   btn.textContent = '✦ 다시 생성';
 }
 
-function renderFakeResult({ v1, v2, _meta }) {
+function renderFakeResult({ v1, v2 }) {
   const diffColor = { 쉬움:'#2ea86e', 보통:'#e6832a', 도전:'#e05555' };
   const keyStr   = document.getElementById('key-select').value || 'C';
   const meterStr = document.getElementById('meter-select').value || '4/4';
@@ -279,7 +231,6 @@ function renderFakeResult({ v1, v2, _meta }) {
       <div class="info-badge">🎵 원곡 <span>${melody.join(' · ')}</span></div>
       <div class="info-badge">🎼 <span>${chords.join(' → ')}</span></div>
       <div class="info-badge">🎷 <span>${STYLE_LABELS[selStyle]}</span></div>
-      ${_meta.ollamaUsed ? `<div class="info-badge" style="margin-left:auto;"><span style="color:#2ea86e;font-size:11px;">✦ AI 생성 (${_meta.model})</span></div>` : ''}
     </div>
     <div class="legend">
       <div class="leg"><span class="leg-dot" style="background:var(--chord)"></span>코드 구성음</div>
@@ -298,7 +249,7 @@ function renderFakeResult({ v1, v2, _meta }) {
       `<span class="note-pill ${n.type}">${n.note}<span class="tip">${n.label}</span></span>`
     ).join('');
     const dc  = diffColor[v.difficulty] || 'var(--text3)';
-    const src = v.source === 'ollama' ? '<span class="v-source ollama">AI</span>' : '<span class="v-source rule">규칙</span>';
+    const src = '<span class="v-source rule">규칙</span>';
 
     html += `
       <div class="version-card">
@@ -354,7 +305,7 @@ function renderObbliResult({ patterns, _meta }, sustainNote, chord) {
     const pills = (p.notes || []).map(n =>
       `<span class="note-pill ${n.type}">${n.note}<span class="tip">${n.label}</span></span>`
     ).join('');
-    const src = p.source === 'ollama' ? '<span class="v-source ollama">AI</span>' : '<span class="v-source rule">규칙</span>';
+    const src = '<span class="v-source rule">규칙</span>';
     html += `
       <div class="version-card" style="animation-delay:${i * 0.1}s">
         <div class="version-head">

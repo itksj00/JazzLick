@@ -21,12 +21,6 @@ nav{position:sticky;top:0;z-index:100;height:var(--nav-h);background:var(--surfa
 .nav-link:hover{background:var(--surface2);color:var(--text);}
 .profile-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);background:var(--surface2);cursor:pointer;margin-right:8px;transition:all .15s;}
 .profile-badge:hover{border-color:var(--border2);}
-.ollama-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text3);background:var(--surface2);cursor:pointer;transition:all .15s;margin-right:8px;}
-.ollama-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);}
-.ollama-badge.ok{color:#2ea86e;border-color:rgba(46,168,110,.3);background:rgba(46,168,110,.06);}
-.ollama-badge.ok .ollama-dot{background:#2ea86e;}
-.ollama-badge.err{color:#e05555;border-color:rgba(224,85,85,.3);background:rgba(224,85,85,.06);}
-.ollama-badge.err .ollama-dot{background:#e05555;}
 .theme-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;}
 .theme-btn:hover{border-color:var(--border2);color:var(--text);}
 .mode-tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:20px;}
@@ -103,7 +97,6 @@ nav{position:sticky;top:0;z-index:100;height:var(--nav-h);background:var(--surfa
 .v-diff{margin-left:auto;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:3px;}
 .diff-dot{width:6px;height:6px;border-radius:50%;}
 .v-source{font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px;}
-.v-source.ollama{background:rgba(46,168,110,.12);color:#2ea86e;}
 .v-source.rule{background:rgba(91,106,240,.1);color:var(--primary);}
 .version-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
 .note-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
@@ -185,10 +178,6 @@ footer{margin-top:48px;border-top:1px solid var(--border);padding:18px 24px;text
     <button class="nav-link" onclick="showAbout()">소개</button>
   </div>
   <div class="profile-badge" id="profile-badge" onclick="resetProfile()">👤 <span id="profile-label">프로필</span></div>
-  <div class="ollama-badge" id="ollama-badge" onclick="toggleSetup()">
-    <span class="ollama-dot" id="ollama-dot"></span>
-    <span id="ollama-label">확인 중...</span>
-  </div>
   <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀️</button>
 </nav>
 
@@ -349,8 +338,6 @@ footer{margin-top:48px;border-top:1px solid var(--border);padding:18px 24px;text
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="js/rule-engine.js"></script>
-<script src="js/ollama.js"></script>
-<script src="js/hybrid-engine.js"></script>
 <script src="js/firebase.js"></script>
 <script src="js/onboarding.js"></script>
 <script src="js/feedback.js"></script>
