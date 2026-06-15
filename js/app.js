@@ -12,16 +12,14 @@ let selBeat   = '3';
 let selFeel   = 'lyrical';
 let curMode   = 'fake';
 let activeTech = new Set(['grace', 'passing', 'neighbor']);
-let setupVisible = false;
 
 const STYLE_LABELS = { jazz:'재즈 페이크', ballad:'발라드', bebop:'비밥', gospel:'가스펠/소울', latin:'라틴 재즈', fusion:'퓨전', swing:'스윙' };
 const TECH_LABELS  = { grace:'앞꾸밈음', passing:'경과음', neighbor:'보조음', turn:'돌음', anticipation:'당김음', delay:'지연음' };
 const FEEL_LABELS  = { lyrical:'서정적', jazzy:'재즈풍', gospel:'가스펠', active:'활발하게' };
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   buildKeys();
   applySystemTheme();
-  await initOllama();
   FB.configure({
     apiKey: "AIzaSyDB34Il0rIQWU7M5UXfTB8geTxosAscBQc",
     authDomain: "jazzlick-90cd0.firebaseapp.com",
@@ -31,19 +29,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     appId: "1:180782187928:web:06f10fecdc2caec007d7ed"
   });
   if (Onboarding.needsOnboarding()) {
-    Onboarding.show((profile) => {
-      updateProfileBadge(profile);
-    });
+    Onboarding.show((profile) => updateProfileBadge(profile));
   } else {
     updateProfileBadge(FB.getUserProfile());
   }
 });
-
-async function initOllama() {
-  updateOllamaBadge('checking');
-  const status = await HybridEngine.init();
-  updateOllamaBadge(status.available ? 'ok' : 'err', status.model);
-}
 
 function updateProfileBadge(profile) {
   if (!profile) return;
@@ -58,35 +48,6 @@ function resetProfile() {
   if (!confirm('프로필을 다시 설정하시겠어요?')) return;
   localStorage.removeItem('jl_profile');
   Onboarding.show((profile) => updateProfileBadge(profile));
-}
-
-async function retryOllama() {
-  const url = document.getElementById('ollama-url').value.trim();
-  if (url) OllamaClient.setBaseUrl(url);
-  updateOllamaBadge('checking');
-  const status = await HybridEngine.init();
-  updateOllamaBadge(status.available ? 'ok' : 'err', status.model);
-}
-
-function updateOllamaBadge(state, model) {
-  const badge = document.getElementById('ollama-badge');
-  const label = document.getElementById('ollama-label');
-  badge.className = 'ollama-badge';
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
-  if (state === 'checking') {
-    label.textContent = '확인 중...';
-  } else if (state === 'ok') {
-    badge.classList.add('ok');
-    label.textContent = `AI: ${model || 'Ollama'}`;
-  } else {
-    badge.classList.add('err');
-    label.textContent = isLocal ? 'Ollama 미연결 (규칙 기반)' : '규칙 기반 모드';
-  }
-}
-
-function toggleSetup() {
-  setupVisible = !setupVisible;
-  document.getElementById('setup-card').classList.toggle('show', setupVisible);
 }
 
 function applySystemTheme() {
@@ -224,15 +185,10 @@ async function generateFake() {
   showLoading('페이크 버전 생성 중...');
 
   try {
-    const result = await HybridEngine.generateFake({
-      melody,
-      chords,
-      style: STYLE_LABELS[selStyle],
-      techniques: activeTech,
-      keyStr: document.getElementById('key-select').value || '',
-      meter: document.getElementById('meter-select').value,
-    });
-    renderFakeResult(result);
+    const styleKey = Object.keys(STYLE_LABELS).find(k => STYLE_LABELS[k] === STYLE_LABELS[selStyle]) || selStyle;
+    const v1 = RuleEngine.generateV1(melody, chords, activeTech, styleKey);
+    const v2 = RuleEngine.generateV2Fallback(melody, chords, activeTech, styleKey);
+    renderFakeResult({ v1, v2 });
   } catch (e) {
     showError(e.message);
   }
@@ -252,14 +208,10 @@ async function generateObbli() {
   showLoading('오블리가토 선율 생성 중...');
 
   try {
-    const result = await HybridEngine.generateObbli({
-      sustainNote,
-      beats: selBeat,
-      chord: obbliChord,
-      chords,
-      feel: FEEL_LABELS[selFeel],
-    });
-    renderObbliResult(result, sustainNote, obbliChord);
+    const patterns = RuleEngine.generateObbliRule(
+      sustainNote, selBeat, obbliChord, selStyle, FEEL_LABELS[selFeel]
+    );
+    renderObbliResult({ patterns }, sustainNote, obbliChord);
   } catch (e) {
     showError(e.message);
   }
@@ -267,7 +219,7 @@ async function generateObbli() {
   btn.textContent = '✦ 다시 생성';
 }
 
-function renderFakeResult({ v1, v2, _meta }) {
+function renderFakeResult({ v1, v2 }) {
   const diffColor = { 쉬움:'#2ea86e', 보통:'#e6832a', 도전:'#e05555' };
   const keyStr   = document.getElementById('key-select').value || 'C';
   const meterStr = document.getElementById('meter-select').value || '4/4';
@@ -279,7 +231,6 @@ function renderFakeResult({ v1, v2, _meta }) {
       <div class="info-badge">🎵 원곡 <span>${melody.join(' · ')}</span></div>
       <div class="info-badge">🎼 <span>${chords.join(' → ')}</span></div>
       <div class="info-badge">🎷 <span>${STYLE_LABELS[selStyle]}</span></div>
-      ${_meta.ollamaUsed ? `<div class="info-badge" style="margin-left:auto;"><span style="color:#2ea86e;font-size:11px;">✦ AI 생성 (${_meta.model})</span></div>` : ''}
     </div>
     <div class="legend">
       <div class="leg"><span class="leg-dot" style="background:var(--chord)"></span>코드 구성음</div>
@@ -298,7 +249,7 @@ function renderFakeResult({ v1, v2, _meta }) {
       `<span class="note-pill ${n.type}">${n.note}<span class="tip">${n.label}</span></span>`
     ).join('');
     const dc  = diffColor[v.difficulty] || 'var(--text3)';
-    const src = v.source === 'ollama' ? '<span class="v-source ollama">AI</span>' : '<span class="v-source rule">규칙</span>';
+    const src = '<span class="v-source rule">규칙</span>';
 
     html += `
       <div class="version-card">
@@ -354,7 +305,7 @@ function renderObbliResult({ patterns, _meta }, sustainNote, chord) {
     const pills = (p.notes || []).map(n =>
       `<span class="note-pill ${n.type}">${n.note}<span class="tip">${n.label}</span></span>`
     ).join('');
-    const src = p.source === 'ollama' ? '<span class="v-source ollama">AI</span>' : '<span class="v-source rule">규칙</span>';
+    const src = '<span class="v-source rule">규칙</span>';
     html += `
       <div class="version-card" style="animation-delay:${i * 0.1}s">
         <div class="version-head">
@@ -402,102 +353,119 @@ function showAbout() {
   alert('🎷 MelodyFake\n\n재즈/색소폰 연주자를 위한 멜로디 페이크 학습 도구입니다.\n\n• 규칙 기반 엔진: 재즈 이론으로 정확하고 빠르게\n• Ollama AI: 더 창의적인 2절·오블리가토 생성\n• 완전 로컬 · 무료 · 외부 API 없음\n\n개발 중인 기능: 악보 자동 변환, PDF 내보내기');
 }
 
-function assignOctaves(noteNames, startOctave = 4) {
+function assignOctaves(noteNames) {
   const CHROM = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const ENAR  = {'Db':'C#','Eb':'D#','Fb':'E','Gb':'F#','Ab':'G#','Bb':'A#','Cb':'B','E#':'F','B#':'C'};
+  const START = 65;
+  const LO    = 52;
+  const HI    = 84;
   const result = [];
-  let prevMidi = -1;
+  let prev = START;
   noteNames.forEach(name => {
-    const norm = (window.RuleEngine ? RuleEngine.normalizeNote(name) : name);
+    const norm = ENAR[name] || name;
     const pc   = CHROM.indexOf(norm);
-    if (pc === -1) { result.push({ note: norm, octave: startOctave }); return; }
-    let octave = startOctave;
-    if (prevMidi !== -1) {
-      const baseOct = Math.round((prevMidi - pc) / 12);
-      let best = startOctave, bestDist = 999;
-      for (let o = Math.max(2, baseOct - 1); o <= Math.min(7, baseOct + 2); o++) {
-        const midi = pc + (o + 1) * 12;
-        const dist = Math.abs(midi - prevMidi);
-        if (dist < bestDist) { bestDist = dist; best = o; }
-      }
-      octave = best;
+    if (pc === -1) { result.push({ note: 'b', octave: 4 }); return; }
+    let bestMidi = -1, bestDist = 999;
+    for (let o = 2; o <= 6; o++) {
+      const midi = pc + (o + 1) * 12;
+      if (midi < LO || midi > HI) continue;
+      const d = Math.abs(midi - prev);
+      if (d < bestDist) { bestDist = d; bestMidi = midi; }
     }
-    prevMidi = pc + (octave + 1) * 12;
+    if (bestMidi === -1) bestMidi = pc + 60;
+    const octave = (bestMidi - pc) / 12 - 1;
     result.push({ note: norm, octave });
+    prev = bestMidi;
   });
   return result;
 }
 
 function renderInlineScore(containerEl, noteObjs, keyStr = 'C', meterStr = '4/4') {
   if (!containerEl || !noteObjs || !noteObjs.length) {
-    if (containerEl) containerEl.innerHTML = '<div style="padding:12px;font-size:12px;color:#aaa;text-align:center;">음표 없음</div>';
+    if (containerEl) containerEl.innerHTML = '<div style="padding:12px;color:#aaa;text-align:center;font-size:12px;">음표 없음</div>';
     return;
   }
   try {
-    const noteNames  = noteObjs.map(n => n.note);
-    const withOcts   = assignOctaves(noteNames);
-    const [bpb]      = meterStr.split('/').map(Number);
-    const epb        = bpb * 2;
-    const TYPE_COLORS = { chord:'#2b8fce', nonchord:'#d07030', ornament:'#2ea86e' };
-
-    const rawNotes = withOcts.map((item, i) => {
-      const lower    = item.note.toLowerCase();
-      const hasSharp = lower.includes('#');
-      return { key:`${lower}/${item.octave}`, hasSharp, type: noteObjs[i].type, dur:'8' };
-    });
-
+    const VF = Vex.Flow;
+    const [bpb, bv] = meterStr.split('/').map(Number);
+    const epb = bpb * 2;
+    const MAX_BARS = 4;
+    const withOcts = assignOctaves(noteObjs.map(n => n.note));
+    const limited = withOcts.slice(0, epb * MAX_BARS);
     const bars = [];
-    for (let i = 0; i < rawNotes.length; i += epb) {
-      const bar = rawNotes.slice(i, i + epb);
-      while (bar.length < epb) bar.push({ key:'b/4', hasSharp:false, type:'rest', dur:'8r' });
+    for (let i = 0; i < limited.length; i += epb) {
+      const bar = limited.slice(i, i + epb);
+      while (bar.length < epb) bar.push({ note: 'b', octave: 4, isRest: true });
       bars.push(bar);
     }
     if (!bars.length) return;
 
-    const VF         = Vex.Flow;
-    const containerW = Math.max(containerEl.clientWidth - 32, 360);
-    const barsPerRow = Math.max(1, Math.min(4, Math.floor(containerW / 180)));
-    const rows       = [];
-    for (let i = 0; i < bars.length; i += barsPerRow) rows.push(bars.slice(i, i + barsPerRow));
-    const barW  = Math.floor((containerW - 80) / barsPerRow);
-    const rowH  = 100;
-    const totalH = rows.length * rowH + 30;
+    const TYPE_COLORS = { chord:'#2b8fce', nonchord:'#d07030', ornament:'#2ea86e' };
+    const W = Math.max(containerEl.clientWidth - 40, 400);
+    const bpr = Math.min(2, bars.length);
+    const rows = [];
+    for (let i = 0; i < bars.length; i += bpr) rows.push(bars.slice(i, i + bpr));
+    const rowH = 130;
+    const totalH = rows.length * rowH + 20;
 
-    const vexDiv  = document.createElement('div');
-    vexDiv.id     = `vex-inner-${Date.now()}`;
+    const divId = `vex-${Date.now()}`;
+    const div = document.createElement('div');
+    div.id = divId;
     containerEl.innerHTML = '';
-    containerEl.appendChild(vexDiv);
+    containerEl.appendChild(div);
 
-    const renderer = new VF.Renderer(vexDiv.id, VF.Renderer.Backends.SVG);
-    renderer.resize(containerW, totalH);
+    const renderer = new VF.Renderer(divId, VF.Renderer.Backends.SVG);
+    renderer.resize(W, totalH);
     const ctx = renderer.getContext();
 
+    let startIdx = 0;
     rows.forEach((rowBars, ri) => {
-      let xOff = 20;
+      const firstExtra = 80;
+      const totalBarsW = W - 20 - firstExtra;
+      const restBarW = rowBars.length > 1 ? Math.floor(totalBarsW / (rowBars.length - 1 + 1.4)) : W - 20;
+      const firstBarW = rowBars.length > 1 ? Math.floor(restBarW * 1.4) : W - 20;
+      let xOff = 10;
+
       rowBars.forEach((barNotes, bi) => {
         const isFirst = ri === 0 && bi === 0;
-        const stave   = new VF.Stave(xOff, ri * rowH + 20, barW);
-        if (bi === 0)  stave.addClef('treble');
+        const staveW = bi === 0 ? firstBarW : restBarW;
+        const stave = new VF.Stave(xOff, ri * rowH + 20, staveW);
+        if (bi === 0) stave.addClef('treble');
         if (isFirst) {
           if (keyStr && keyStr !== 'C') stave.addKeySignature(keyStr);
           stave.addTimeSignature(meterStr);
         }
         stave.setContext(ctx).draw();
 
-        const vfNotes = barNotes.map(nd => {
-          const sn = new VF.StaveNote({ keys:[nd.key], duration:nd.dur });
-          if (nd.hasSharp) sn.addModifier(new VF.Accidental('#'), 0);
-          if (nd.type && nd.type !== 'rest') {
-            const col = TYPE_COLORS[nd.type] || '#555';
-            sn.setStyle({ fillStyle:col, strokeStyle:col });
+        const vfNotes = barNotes.map((nd, j) => {
+          const lower = (nd.note || 'b').toLowerCase();
+          const key   = nd.isRest ? 'b/4' : `${lower}/${nd.octave}`;
+          const dur   = nd.isRest ? '8r' : '8';
+          const sn    = new VF.StaveNote({ keys: [key], duration: dur });
+          if (!nd.isRest && noteObjs[startIdx + j]) {
+            const col = TYPE_COLORS[noteObjs[startIdx + j].type] || '#444';
+            sn.setStyle({ fillStyle: col, strokeStyle: col });
           }
           return sn;
         });
-        VF.Formatter.FormatAndDraw(ctx, stave, vfNotes);
-        xOff += barW;
+
+        try {
+          const voice = new VF.Voice({ num_beats: bpb, beat_value: bv });
+          voice.setStrict(false);
+          voice.addTickables(vfNotes);
+          VF.Accidental.applyAccidentals([voice], keyStr || 'C');
+          new VF.Formatter().joinVoices([voice]).format([voice], staveW - 30);
+          voice.draw(ctx, stave);
+        } catch {
+          VF.Formatter.FormatAndDraw(ctx, stave, vfNotes);
+        }
+
+        startIdx += epb;
+        xOff += staveW;
       });
     });
-  } catch (e) {
-    containerEl.innerHTML = `<div style="padding:10px;font-size:12px;color:#e05555;">악보 렌더링 오류: ${e.message}</div>`;
+  } catch(e) {
+    containerEl.innerHTML = `<div style="padding:10px;font-size:12px;color:#e05555;">악보 오류: ${e.message}</div>`;
   }
 }
 
