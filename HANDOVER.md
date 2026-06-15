@@ -193,4 +193,7 @@ Firebase에 쌓인 edits 컬렉션을 분석:
 | 2026-05-28 | Claude Sonnet 4.6 | 프로젝트명 MelodyFake → JazzLick 변경 (폴더명, 모든 파일 참조, localStorage key 등) |
 | 2026-05-29 | Claude Sonnet 4.6 | app.js 온보딩+피드백 연결 완료 / renderFakeResult + renderObbliResult에 피드백 UI 추가 / 모든 js 파일 주석 제거 |
 | 2026-05-29 | Claude Sonnet 4.6 | Firebase 실제 연결 완료 (SDK 추가, config 설정) / 미완료 작업 업데이트 (GitHub Pages 배포만 남음) |
-| 2026-05-30 | Claude Sonnet 4.6 | rule-engine 전면 고도화: encircle(4종) / 펜타토닉 오버 코드 매핑 / 코드 대리 시스템(상하3도·트리톤·관계조) / 모달 인터체인지 / ii-V-I 전용 릭 라이브러리 / 블루스 크라이 / 콜앤리스폰스 / 모티브 축소·시퀀스 / 릭 라이브러리 6→9카테고리 80개+ / getTensionNotes 버그 수정 / 오블리가토 패턴 11→15종 / 검증 완료 |
+| 2026-05-30 | Claude Sonnet 4.6 | 악보 탭 완전 제거 / 멜로디 페이크 결과 카드 하단에 inline 악보 자동 표시 (VexFlow) / 음표 색상 코드음·비화성음·꾸밈음 구분 / SVG 다운로드 / assignOctaves 자동 옥타브 배정 함수 추가 |
+| 2026-06-02 | Claude Sonnet 4.6 | rule-engine 2차 고도화: 스타일 4→7종(latin·fusion·swing) / 진행감지 coltrane·chromatic_mediant 추가 / 부속도미넌트·백사이클링·콜트레인체인지·나폴리화음·반음중간음 추가 / 모티브 mirror·rhythmicDisplacement / 릭 latin·fusion·swing·coltrane 카테고리 추가 / 오블리가토 15→19종 / longTurn·tripleApproach·latinClave·swingLick 추가 / 전체 검증 통과 |
+| 2026-06-04 | Claude Sonnet 4.6 | rule-engine 3차 고도화: COLOR_TONES·AVOID_NOTES·CHORD_FUNCTION 테이블 / getColorTones·getAvoidNotes·getChordFunction / outsidePlaying·sideStep·backdoor / chromaticRun·diminishedSymmetry·augmentedPattern·quartalNotes·upperStructureNotes / generatePhrase 완결 프레이즈 생성 / getProgressionSpecificLick 진행별 릭 / 릭 라이브러리 parker·cool·modal_jazz·soul_jazz·coltrane_sheets 카테고리 추가 / 오블리가토 패턴 19→26종 / toJazzNote 플랫 표기 수정 / 전체 검증 통과 |
+| 2026-06-05 | Claude Sonnet 4.6 | Ollama 완전 제거 (CORS 이슈 + 규칙 엔진 자급자족) / ollama.js·hybrid-engine.js 삭제 / RuleEngine 직접 호출로 단순화 / Ollama 배지·CSS·setup-card 제거 / generateFake·generateObbli 동기 처리로 변경 / setupVisible 변수 제거 |
