@@ -7,6 +7,7 @@ KR.forEach((k, i) => KR2EN[k] = EN[i]);
 
 let melody    = [];
 let chords    = [];
+let selDur    = '4';
 let selStyle  = 'jazz';
 let selBeat   = '3';
 let selFeel   = 'lyrical';
@@ -95,7 +96,9 @@ function buildKeys() {
   document.getElementById('key-btns').innerHTML = h;
 }
 
-function addNote(n) { melody.push(n); renderMelody(); }
+const DUR_LABELS = { '1':'온', '2':'2분', '4':'4분', '8':'8분', '16':'16분' };
+
+function addNote(n) { melody.push({ note: n, dur: selDur }); renderMelody(); }
 function clearMelody() { melody = []; renderMelody(); }
 
 function renderMelody() {
@@ -103,10 +106,11 @@ function renderMelody() {
   const hint = document.getElementById('mel-hint');
   hint.style.display = melody.length ? 'none' : '';
   Array.from(d.querySelectorAll('.m-tag')).forEach(el => el.remove());
-  melody.forEach((n, i) => {
+  melody.forEach((item, i) => {
     const tag = document.createElement('div');
     tag.className = 'm-tag';
-    tag.innerHTML = `${n}<button onclick="melody.splice(${i},1);renderMelody()" title="삭제">×</button>`;
+    const durLabel = DUR_LABELS[item.dur] || (item.dur + '분');
+    tag.innerHTML = `${item.note}<sup class="dur-sup">${durLabel}</sup><button onclick="melody.splice(${i},1);renderMelody()" title="삭제">×</button>`;
     d.appendChild(tag);
   });
 }
@@ -114,11 +118,19 @@ function renderMelody() {
 function parseManual() {
   const raw = document.getElementById('manual-in').value.trim();
   if (!raw) return;
+  const VALID_DURS = ['16','8','4','2','1'];
   raw.split(/[\s,]+/).filter(Boolean).forEach(t => {
-    const up = t.charAt(0).toUpperCase() + t.slice(1);
-    if (EN.includes(up))       melody.push(up);
-    else if (KR2EN[up])        melody.push(KR2EN[up]);
-    else if (KR2EN[t])         melody.push(KR2EN[t]);
+    let durSuffix = selDur;
+    let token = t;
+    const m = t.match(/^(.+?)(\d+)$/);
+    if (m && VALID_DURS.includes(m[2])) {
+      token = m[1];
+      durSuffix = m[2];
+    }
+    const up = token.charAt(0).toUpperCase() + token.slice(1);
+    if (EN.includes(up))       melody.push({ note: up,        dur: durSuffix });
+    else if (KR2EN[up])        melody.push({ note: KR2EN[up], dur: durSuffix });
+    else if (KR2EN[token])     melody.push({ note: KR2EN[token], dur: durSuffix });
   });
   renderMelody();
   document.getElementById('manual-in').value = '';
@@ -169,6 +181,11 @@ function setFeel(btn) {
   btn.classList.add('on');
   selFeel = btn.dataset.f;
 }
+function setDur(btn) {
+  document.querySelectorAll('#dur-group .chip').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  selDur = btn.dataset.d;
+}
 
 async function generate() {
   if (curMode === 'fake') await generateFake();
@@ -186,8 +203,9 @@ async function generateFake() {
 
   try {
     const styleKey = Object.keys(STYLE_LABELS).find(k => STYLE_LABELS[k] === STYLE_LABELS[selStyle]) || selStyle;
-    const v1 = RuleEngine.generateV1(melody, chords, activeTech, styleKey);
-    const v2 = RuleEngine.generateV2Fallback(melody, chords, activeTech, styleKey);
+    const melodyNotes = melody.map(m => m.note);
+    const v1 = RuleEngine.generateV1(melodyNotes, chords, activeTech, styleKey);
+    const v2 = RuleEngine.generateV2Fallback(melodyNotes, chords, activeTech, styleKey);
     renderFakeResult({ v1, v2 });
   } catch (e) {
     showError(e.message);
@@ -228,7 +246,7 @@ function renderFakeResult({ v1, v2 }) {
 
   let html = `
     <div class="info-bar">
-      <div class="info-badge">🎵 원곡 <span>${melody.join(' · ')}</span></div>
+      <div class="info-badge">🎵 원곡 <span>${melody.map(m => m.note).join(' · ')}</span></div>
       <div class="info-badge">🎼 <span>${chords.join(' → ')}</span></div>
       <div class="info-badge">🎷 <span>${STYLE_LABELS[selStyle]}</span></div>
     </div>
@@ -280,8 +298,9 @@ function renderFakeResult({ v1, v2 }) {
   document.getElementById('result-wrap').innerHTML = html;
 
   setTimeout(() => {
-    renderInlineScore(document.getElementById('score-v1'), v1.notes, keyStr, meterStr);
-    renderInlineScore(document.getElementById('score-v2'), v2.notes, keyStr, meterStr);
+    const melDurs = melody.map(m => m.dur);
+    renderInlineScore(document.getElementById('score-v1'), v1.notes, keyStr, meterStr, melDurs);
+    renderInlineScore(document.getElementById('score-v2'), v2.notes, keyStr, meterStr, melDurs);
   }, 80);
 }
 
@@ -346,11 +365,11 @@ function showError(msg) {
 }
 
 function showGuide() {
-  alert('💡 사용법\n\n【멜로디 페이크】\n멜로디 + 코드를 입력하면\n1절(꾸밈음 위주)·2절(애드립 위주) 버전을 생성합니다.\n\n【오블리가토】\n긴 음 + 박자 + 코드를 입력하면\n그 공간을 채워주는 장식 선율을 생성합니다.\n\nOllama가 연결되면 AI가 더 창의적인 버전을 만들어요.\n연결이 없어도 규칙 기반 엔진으로 기본 기능 동작합니다.');
+  alert('💡 사용법\n\n【멜로디 페이크】\n멜로디 + 코드를 입력하면\n1절(꾸밈음 위주)·2절(애드립 위주) 버전을 생성합니다.\n\n【오블리가토】\n긴 음 + 박자 + 코드를 입력하면\n그 공간을 채워주는 장식 선율을 생성합니다.\n\n재즈 이론 규칙 엔진이 완전 로컬로 동작합니다.');
 }
 
 function showAbout() {
-  alert('🎷 MelodyFake\n\n재즈/색소폰 연주자를 위한 멜로디 페이크 학습 도구입니다.\n\n• 규칙 기반 엔진: 재즈 이론으로 정확하고 빠르게\n• Ollama AI: 더 창의적인 2절·오블리가토 생성\n• 완전 로컬 · 무료 · 외부 API 없음\n\n개발 중인 기능: 악보 자동 변환, PDF 내보내기');
+  alert('🎷 JazzLick\n\n재즈/색소폰 연주자를 위한 멜로디 페이크 학습 도구입니다.\n\n• 규칙 기반 엔진: 재즈 이론으로 정확하고 빠르게\n• Firebase: 피드백 수집으로 매월 엔진 개선\n• 완전 로컬 · 무료 · 외부 API 없음\n\n개발 중인 기능: 악보 자동 변환, PDF 내보내기');
 }
 
 function assignOctaves(noteNames) {
@@ -380,7 +399,7 @@ function assignOctaves(noteNames) {
   return result;
 }
 
-function renderInlineScore(containerEl, noteObjs, keyStr = 'C', meterStr = '4/4') {
+function renderInlineScore(containerEl, noteObjs, keyStr = 'C', meterStr = '4/4', melodyDurs = null) {
   if (!containerEl || !noteObjs || !noteObjs.length) {
     if (containerEl) containerEl.innerHTML = '<div style="padding:12px;color:#aaa;text-align:center;font-size:12px;">음표 없음</div>';
     return;
@@ -388,23 +407,61 @@ function renderInlineScore(containerEl, noteObjs, keyStr = 'C', meterStr = '4/4'
   try {
     const VF = Vex.Flow;
     const [bpb, bv] = meterStr.split('/').map(Number);
-    const epb = bpb * 2;
-    const MAX_BARS = 4;
+
+    const DUR_TICKS = { '1': bpb * 4, '2': bpb * 2, '4': bpb, '8': bpb / 2, '16': bpb / 4 };
+    const barTicks = bpb * 4;
+
     const withOcts = assignOctaves(noteObjs.map(n => n.note));
-    const limited = withOcts.slice(0, epb * MAX_BARS);
+
+    const notes = withOcts.map((nd, i) => {
+      const userDur = melodyDurs ? (melodyDurs[i] || '8') : '8';
+      const vfDur = userDur;
+      const ticks = DUR_TICKS[userDur] || (bpb / 2);
+      return { ...nd, vfDur, ticks, origType: noteObjs[i]?.type };
+    });
+
     const bars = [];
-    for (let i = 0; i < limited.length; i += epb) {
-      const bar = limited.slice(i, i + epb);
-      while (bar.length < epb) bar.push({ note: 'b', octave: 4, isRest: true });
-      bars.push(bar);
+    let curBar = [], curTicks = 0;
+    notes.forEach(nd => {
+      curBar.push(nd);
+      curTicks += nd.ticks;
+      if (curTicks >= barTicks) {
+        bars.push(curBar);
+        curBar = [];
+        curTicks = 0;
+      }
+    });
+    if (curBar.length) {
+      const remTicks = barTicks - curTicks;
+      if (remTicks >= (bpb / 4)) {
+        const restDur = remTicks >= bpb ? '4' : remTicks >= (bpb / 2) ? '8' : '16';
+        curBar.push({ note: 'b', octave: 4, isRest: true, vfDur: restDur, ticks: remTicks, origType: null });
+      }
+      bars.push(curBar);
     }
     if (!bars.length) return;
 
     const TYPE_COLORS = { chord:'#2b8fce', nonchord:'#d07030', ornament:'#2ea86e' };
-    const W = Math.max(containerEl.clientWidth - 40, 400);
+    const PX_PER_NOTE = 38;
+    const MIN_BAR_W = 120;
+    const CLEF_EXTRA = 70;
+    const KEYSIG_EXTRA = keyStr && keyStr !== 'C' ? 40 : 0;
+    const TIMESIG_EXTRA = 40;
+
     const bpr = Math.min(2, bars.length);
     const rows = [];
     for (let i = 0; i < bars.length; i += bpr) rows.push(bars.slice(i, i + bpr));
+
+    const rowWidths = rows.map((rowBars, ri) => {
+      return rowBars.reduce((sum, barNotes, bi) => {
+        let w = Math.max(barNotes.length * PX_PER_NOTE, MIN_BAR_W);
+        if (bi === 0) w += CLEF_EXTRA;
+        if (ri === 0 && bi === 0) w += KEYSIG_EXTRA + TIMESIG_EXTRA;
+        return sum + w;
+      }, 20);
+    });
+    const totalW = Math.max(...rowWidths, 400);
+
     const rowH = 130;
     const totalH = rows.length * rowH + 20;
 
@@ -415,20 +472,17 @@ function renderInlineScore(containerEl, noteObjs, keyStr = 'C', meterStr = '4/4'
     containerEl.appendChild(div);
 
     const renderer = new VF.Renderer(divId, VF.Renderer.Backends.SVG);
-    renderer.resize(W, totalH);
+    renderer.resize(totalW, totalH);
     const ctx = renderer.getContext();
 
-    let startIdx = 0;
     rows.forEach((rowBars, ri) => {
-      const firstExtra = 80;
-      const totalBarsW = W - 20 - firstExtra;
-      const restBarW = rowBars.length > 1 ? Math.floor(totalBarsW / (rowBars.length - 1 + 1.4)) : W - 20;
-      const firstBarW = rowBars.length > 1 ? Math.floor(restBarW * 1.4) : W - 20;
       let xOff = 10;
-
       rowBars.forEach((barNotes, bi) => {
         const isFirst = ri === 0 && bi === 0;
-        const staveW = bi === 0 ? firstBarW : restBarW;
+        let staveW = Math.max(barNotes.length * PX_PER_NOTE, MIN_BAR_W);
+        if (bi === 0) staveW += CLEF_EXTRA;
+        if (isFirst) staveW += KEYSIG_EXTRA + TIMESIG_EXTRA;
+
         const stave = new VF.Stave(xOff, ri * rowH + 20, staveW);
         if (bi === 0) stave.addClef('treble');
         if (isFirst) {
@@ -437,13 +491,13 @@ function renderInlineScore(containerEl, noteObjs, keyStr = 'C', meterStr = '4/4'
         }
         stave.setContext(ctx).draw();
 
-        const vfNotes = barNotes.map((nd, j) => {
+        const vfNotes = barNotes.map(nd => {
           const lower = (nd.note || 'b').toLowerCase();
           const key   = nd.isRest ? 'b/4' : `${lower}/${nd.octave}`;
-          const dur   = nd.isRest ? '8r' : '8';
+          const dur   = nd.isRest ? `${nd.vfDur}r` : nd.vfDur;
           const sn    = new VF.StaveNote({ keys: [key], duration: dur });
-          if (!nd.isRest && noteObjs[startIdx + j]) {
-            const col = TYPE_COLORS[noteObjs[startIdx + j].type] || '#444';
+          if (!nd.isRest && nd.origType) {
+            const col = TYPE_COLORS[nd.origType] || '#444';
             sn.setStyle({ fillStyle: col, strokeStyle: col });
           }
           return sn;
@@ -454,13 +508,12 @@ function renderInlineScore(containerEl, noteObjs, keyStr = 'C', meterStr = '4/4'
           voice.setStrict(false);
           voice.addTickables(vfNotes);
           VF.Accidental.applyAccidentals([voice], keyStr || 'C');
-          new VF.Formatter().joinVoices([voice]).format([voice], staveW - 30);
+          new VF.Formatter().joinVoices([voice]).format([voice], staveW - 20);
           voice.draw(ctx, stave);
         } catch {
           VF.Formatter.FormatAndDraw(ctx, stave, vfNotes);
         }
 
-        startIdx += epb;
         xOff += staveW;
       });
     });
